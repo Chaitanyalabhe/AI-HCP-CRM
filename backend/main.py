@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi import HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from agent import run_agent
 import tools
@@ -6,12 +7,19 @@ from database import SessionLocal, Interaction
 from langchain_core.messages import HumanMessage, AIMessage
 from models import ChatRequest, ChatResponse, SaveInteractionRequest, SaveInteractionResponse, InteractionResponse
 from typing import List
+import os
 
 app = FastAPI()
 
+_cors_origins_env = os.getenv(
+    "CORS_ORIGINS",
+    "http://localhost:5173,http://127.0.0.1:5173",
+)
+_cors_origins = [o.strip() for o in _cors_origins_env.split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -19,11 +27,18 @@ app.add_middleware(
 
 conversation_history = []
 
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
+
 
 @app.post("/chat", response_model=ChatResponse)
 async def chat(payload: ChatRequest):
     global conversation_history
-    result_messages = run_agent(payload.message, conversation_history)
+    try:
+        result_messages = run_agent(payload.message, conversation_history)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
     new_msgs = [m for m in result_messages if isinstance(m, (HumanMessage, AIMessage))]
     conversation_history = new_msgs[-20:]

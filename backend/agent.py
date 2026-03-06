@@ -31,10 +31,16 @@ IMPORTANT RULES:
 
 tools = [log_interaction, edit_interaction, summarize_interaction, suggest_follow_up, save_interaction_to_db]
 
+_groq_api_key = os.getenv("GROQ_API_KEY")
+if not _groq_api_key:
+    raise RuntimeError(
+        "Missing GROQ_API_KEY. Set it in the environment (e.g., Render service env vars)."
+    )
+
 llm = ChatGroq(
     model="llama-3.1-8b-instant",
-    api_key=os.getenv("GROQ_API_KEY"),
-    temperature=0
+    api_key=_groq_api_key,
+    temperature=0,
 ).bind_tools(tools)
 
 

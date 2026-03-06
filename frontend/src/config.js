@@ -1,0 +1,1 @@
+export const API_URL = "https://ai-hcp-crm-backend-8c5u.onrender.com";

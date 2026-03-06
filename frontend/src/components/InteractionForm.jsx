@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import axios from 'axios';
 import { updateForm } from '../store/interactionSlice';
+import { API_URL } from '../config';
 import './InteractionForm.css';
 
 export default function InteractionForm() {
@@ -29,14 +30,24 @@ export default function InteractionForm() {
     setInput('');
     setLoading(true);
     try {
-      const res = await axios.post('http://localhost:8000/chat', { message: userText });
+      const baseUrl = (API_URL || '').replace(/\/+$/, '');
+      const res = await axios.post(`${baseUrl}/chat`, { message: userText });
       const { response, form_data } = res.data;
       if (form_data && Object.keys(form_data).length > 0) dispatch(updateForm(form_data));
       setMessages((p) => [...p, { role: 'assistant', text: response || 'Form updated!' }]);
-    } catch {
+    } catch (err) {
+      const status = err?.response?.status;
+      const detail =
+        err?.response?.data?.detail ||
+        (typeof err?.response?.data === 'string' ? err.response.data : null) ||
+        err?.message;
       setMessages((p) => [
         ...p,
-        { role: 'assistant', text: '⚠️ Cannot connect to backend. Make sure FastAPI is running on port 8000.' },
+        {
+          role: 'assistant',
+          text: `⚠️ Backend error (${API_URL})${status ? ` [HTTP ${status}]` : ''}${detail ? `: ${detail}` : ''
+            }`,
+        },
       ]);
     } finally {
       setLoading(false);
